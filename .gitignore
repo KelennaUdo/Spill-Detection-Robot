@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+incidents/
+.DS_Store
+.lgd-nfy0
