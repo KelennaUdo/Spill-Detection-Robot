@@ -110,9 +110,6 @@ def home():
             button.warning {
                 background: var(--warning);
             }
-            button.stop {
-                background: var(--danger);
-            }
             button:active {
                 transform: translateY(1px);
             }
@@ -165,41 +162,41 @@ def home():
 
             <section class="panel">
                 <h2>Robot Drive</h2>
-                <p>Hold a drive button to move. Release anywhere to stop.</p>
+                <p>Hold a drive button or use W/S/A/D to move. Release anywhere to stop.</p>
                 <label for="speed">Drive Speed: <span id="speed-value">40</span></label>
                 <input id="speed" type="range" min="0" max="100" value="40" />
                 <div class="grid">
                     <div></div>
-                    <button data-drive="forward">Forward</button>
+                    <button data-drive="forward">W Forward</button>
                     <div></div>
 
-                    <button data-drive="left">Strafe Left</button>
-                    <button class="stop" data-drive="stop">Stop</button>
-                    <button data-drive="right">Strafe Right</button>
+                    <button data-drive="left">A Strafe Left</button>
+                    <div></div>
+                    <button data-drive="right">D Strafe Right</button>
 
-                    <button data-drive="turn_left">Turn Left</button>
-                    <button data-drive="backward">Reverse</button>
-                    <button data-drive="turn_right">Turn Right</button>
+                    <button data-drive="turn_left">Q Turn Left</button>
+                    <button data-drive="backward">S Reverse</button>
+                    <button data-drive="turn_right">E Turn Right</button>
                 </div>
                 <div id="drive-status" class="status">Loading robot state...</div>
             </section>
 
             <section class="panel">
                 <h2>Camera Servo</h2>
-                <p>Tap these buttons to pan or tilt the Raspberry Pi camera.</p>
+                <p>Tap these buttons or use I/J/K/L to pan or tilt the Raspberry Pi camera.</p>
                 <label for="step">Servo Step: <span id="step-value">10</span> deg</label>
                 <input id="step" type="range" min="1" max="30" value="10" />
                 <div class="grid">
                     <div></div>
-                    <button class="secondary" data-camera="tilt_up">Tilt Up</button>
+                    <button class="secondary" data-camera="tilt_up">I Tilt Up</button>
                     <div></div>
 
-                    <button class="secondary" data-camera="pan_left">Pan Left</button>
+                    <button class="secondary" data-camera="pan_left">J Pan Left</button>
                     <button class="secondary" data-camera="center">Center</button>
-                    <button class="secondary" data-camera="pan_right">Pan Right</button>
+                    <button class="secondary" data-camera="pan_right">L Pan Right</button>
 
                     <div></div>
-                    <button class="secondary" data-camera="tilt_down">Tilt Down</button>
+                    <button class="secondary" data-camera="tilt_down">K Tilt Down</button>
                     <div></div>
                 </div>
             </section>
@@ -221,6 +218,21 @@ def home():
             const driveStatusEl = document.getElementById('drive-status');
             const monitorStatusEl = document.getElementById('monitor-status');
             const incidentListEl = document.getElementById('incident-list');
+            const activeDriveKeys = new Set();
+            const driveKeyMap = {
+                w: 'forward',
+                s: 'backward',
+                a: 'left',
+                d: 'right',
+                q: 'turn_left',
+                e: 'turn_right'
+            };
+            const cameraKeyMap = {
+                i: 'tilt_up',
+                j: 'pan_left',
+                k: 'tilt_down',
+                l: 'pan_right'
+            };
 
             speedInput.addEventListener('input', () => {
                 speedValue.textContent = speedInput.value;
@@ -304,11 +316,6 @@ def home():
             document.querySelectorAll('[data-drive]').forEach(button => {
                 const cmd = button.dataset.drive;
 
-                if (cmd === 'stop') {
-                    button.addEventListener('click', stopMove);
-                    return;
-                }
-
                 button.addEventListener('mousedown', () => startMove(cmd));
                 button.addEventListener('mouseup', stopMove);
                 button.addEventListener('mouseleave', stopMove);
@@ -328,8 +335,55 @@ def home():
                 button.addEventListener('click', () => moveCamera(button.dataset.camera));
             });
 
+            document.addEventListener('keydown', (event) => {
+                const key = event.key.toLowerCase();
+
+                if (event.repeat) {
+                    return;
+                }
+
+                const driveCommand = driveKeyMap[key];
+                if (driveCommand) {
+                    event.preventDefault();
+                    activeDriveKeys.add(key);
+                    startMove(driveCommand);
+                    return;
+                }
+
+                const cameraAction = cameraKeyMap[key];
+                if (cameraAction) {
+                    event.preventDefault();
+                    moveCamera(cameraAction);
+                }
+            });
+
+            document.addEventListener('keyup', (event) => {
+                const key = event.key.toLowerCase();
+                if (!driveKeyMap[key]) {
+                    return;
+                }
+
+                event.preventDefault();
+                activeDriveKeys.delete(key);
+
+                const remainingKeys = Array.from(activeDriveKeys);
+                if (remainingKeys.length === 0) {
+                    stopMove();
+                    return;
+                }
+
+                const nextCommand = driveKeyMap[remainingKeys[remainingKeys.length - 1]];
+                if (nextCommand) {
+                    startMove(nextCommand);
+                }
+            });
+
             document.addEventListener('mouseup', stopMove);
             document.addEventListener('touchend', stopMove);
+            window.addEventListener('blur', () => {
+                activeDriveKeys.clear();
+                stopMove();
+            });
 
             startMonitor().then(() => refreshStatus());
             setInterval(refreshStatus, 4000);
