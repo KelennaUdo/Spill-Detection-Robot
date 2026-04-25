@@ -10,6 +10,12 @@ This project combines a camera, a simple web dashboard, and spill detection soft
 
 When the robot sees something that looks like a spill, it can record the incident so it is easier to review later.
 
+## System Overview
+
+This chart shows how the dashboard, robot controls, camera stream, spill detector, incident confirmation, and report saving pieces work together.
+
+![Spill detection robot system architecture](pics/spill_detection_robot_architecture_dark.jpg)
+
 ## What You Can Do With It
 
 - Drive the robot from a web page
